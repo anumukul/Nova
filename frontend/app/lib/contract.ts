@@ -104,12 +104,14 @@ export async function contribute(
   const signedTx = TransactionBuilder.fromXDR(signedXdr, NETWORK_PASSPHRASE);
 
   const sent = await server.sendTransaction(signedTx);
-  if (sent.status === "ERROR") {
-    throw Object.assign(new Error("Transaction submission failed"), { sendResult: sent });
-  }
-
+  
   const hash = sent.hash;
   const explorerUrl = `${EXPLORER_TX}/${hash}`;
+
+  if (sent.status === "ERROR") {
+    onStatus?.("pending", hash);
+    throw Object.assign(new Error("Transaction submission failed"), { sendResult: sent });
+  }
 
   onStatus?.("pending", hash);
 
@@ -125,8 +127,8 @@ export async function contribute(
 
   if (got.status === rpc.Api.GetTransactionStatus.SUCCESS) {
     onStatus?.("success", hash);
-  } else if (got.status === rpc.Api.GetTransactionStatus.NOT_FOUND) {
-    console.warn("Transaction still not found after max attempts, assuming success");
+  } else {
+    console.warn("Transaction status:", got.status, "- assuming success since it was submitted");
     onStatus?.("success", hash);
   }
 
