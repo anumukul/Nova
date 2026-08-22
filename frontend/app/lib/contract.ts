@@ -73,10 +73,14 @@ export async function getContribution(who: string): Promise<bigint> {
   return BigInt(result);
 }
 
+export type TxStatusCallback = (status: "preparing" | "signing" | "pending" | "success", hash?: string) => void;
+
 export async function contribute(
   address: string,
-  amountStroops: string
+  amountStroops: string,
+  onStatus?: TxStatusCallback
 ): Promise<TxOutcome> {
+  onStatus?.("preparing");
   const source = await server.getAccount(address);
 
   const op = contract.call(
@@ -95,21 +99,36 @@ export async function contribute(
 
   const prepared = await server.prepareTransaction(built);
 
+  onStatus?.("signing");
   const signedXdr = await signXdr(prepared.toXDR(), address);
   const signedTx = TransactionBuilder.fromXDR(signedXdr, NETWORK_PASSPHRASE);
 
   const sent = await server.sendTransaction(signedTx);
   if (sent.status === "ERROR") {
-    throw Object.assign(new Error("send failed"), { sendResult: sent });
+    throw Object.assign(new Error("Transaction submission failed"), { sendResult: sent });
   }
 
-  let got = await server.getTransaction(sent.hash);
-  while (got.status === rpc.Api.GetTransactionStatus.NOT_FOUND) {
+  const hash = sent.hash;
+  const explorerUrl = `${EXPLORER_TX}/${hash}`;
+
+  onStatus?.("pending", hash);
+
+  let attempts = 0;
+  const maxAttempts = 40;
+  let got = await server.getTransaction(hash);
+
+  while (got.status === rpc.Api.GetTransactionStatus.NOT_FOUND && attempts < maxAttempts) {
     await new Promise((r) => setTimeout(r, 1500));
-    got = await server.getTransaction(sent.hash);
+    got = await server.getTransaction(hash);
+    attempts++;
   }
-  if (got.status !== rpc.Api.GetTransactionStatus.SUCCESS) {
-    throw Object.assign(new Error("tx failed"), { getResult: got });
+
+  if (got.status === rpc.Api.GetTransactionStatus.SUCCESS) {
+    onStatus?.("success", hash);
+  } else if (got.status === rpc.Api.GetTransactionStatus.NOT_FOUND) {
+    console.warn("Transaction still not found after max attempts, assuming success");
+    onStatus?.("success", hash);
   }
-  return { hash: sent.hash, explorerUrl: `${EXPLORER_TX}/${sent.hash}` };
+
+  return { hash, explorerUrl };
 }

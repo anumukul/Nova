@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useWallet } from "../context/WalletContext";
 import { contribute } from "../lib/contract";
 import { getXlmBalance } from "../lib/balance";
-import { xlmToStroops, STROOPS_PER_XLM } from "../lib/constants";
+import { xlmToStroops } from "../lib/constants";
 import TxStatus, { TxStatusType } from "./TxStatus";
 import { classifyError } from "../lib/errors";
 
@@ -45,13 +45,11 @@ export default function ContributeForm({ onSuccess }: ContributeFormProps) {
 
       const stroops = xlmToStroops(amountXlm).toString();
 
-      setStatus("signing");
-      const outcome = await contribute(address, stroops);
+      const outcome = await contribute(address, stroops, (newStatus, hash) => {
+        setStatus(newStatus);
+        if (hash) setTxHash(hash);
+      });
 
-      setStatus("pending");
-      setTxHash(outcome.hash);
-
-      setStatus("success");
       setAmount("");
       onSuccess();
     } catch (error: any) {

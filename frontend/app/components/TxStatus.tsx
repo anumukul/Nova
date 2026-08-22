@@ -22,11 +22,13 @@ export default function TxStatus({ status, hash, error }: TxStatusProps) {
   const truncateHash = (h: string) => `${h.slice(0, 8)}...${h.slice(-8)}`;
 
   const copyHash = () => {
-    if (hash) navigator.clipboard.writeText(hash);
+    if (hash) {
+      navigator.clipboard.writeText(hash);
+    }
   };
 
   return (
-    <div className="mt-4 p-4 rounded-lg border">
+    <div className="mt-4 p-4 rounded-lg border border-slate-700">
       {status === "preparing" && (
         <div className="flex items-center gap-3 text-blue-400">
           <div className="animate-spin h-5 w-5 border-2 border-blue-400 border-t-transparent rounded-full" />
@@ -44,38 +46,51 @@ export default function TxStatus({ status, hash, error }: TxStatusProps) {
       {status === "pending" && hash && (
         <div className="flex items-center gap-3 text-blue-400">
           <div className="animate-spin h-5 w-5 border-2 border-blue-400 border-t-transparent rounded-full" />
-          <div>
-            <span>Submitting transaction...</span>
-            <a
-              href={`${EXPLORER_TX}/${hash}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="ml-2 text-sm text-blue-300 hover:text-blue-200"
-            >
-              {truncateHash(hash)}
-            </a>
+          <div className="flex-1">
+            <p className="font-medium">Submitting transaction...</p>
+            <div className="flex items-center gap-2 mt-1">
+              <button
+                onClick={copyHash}
+                className="text-sm text-blue-300 hover:text-blue-200 font-mono"
+                title="Copy hash"
+              >
+                {truncateHash(hash)}
+              </button>
+              <a
+                href={`${EXPLORER_TX}/${hash}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm text-blue-300 hover:text-blue-200"
+              >
+                View on Explorer ↗
+              </a>
+            </div>
           </div>
         </div>
       )}
 
       {status === "success" && hash && (
-        <div className="border-green-500/20 bg-green-500/10">
-          <div className="flex items-center gap-3 text-green-400">
+        <div className="bg-green-500/10 border-green-500/20">
+          <div className="flex items-start gap-3 text-green-400">
             <span className="text-xl">✅</span>
             <div className="flex-1">
               <p className="font-medium">Transaction successful!</p>
-              <div className="flex items-center gap-2 mt-1">
-                <button
-                  onClick={copyHash}
-                  className="text-sm text-green-300 hover:text-green-200"
-                >
-                  {truncateHash(hash)}
-                </button>
+              <div className="flex flex-col gap-1 mt-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-green-300/70">Hash:</span>
+                  <button
+                    onClick={copyHash}
+                    className="text-sm text-green-300 hover:text-green-200 font-mono"
+                    title="Copy hash"
+                  >
+                    {truncateHash(hash)}
+                  </button>
+                </div>
                 <a
                   href={`${EXPLORER_TX}/${hash}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-sm text-green-300 hover:text-green-200"
+                  className="text-sm text-green-300 hover:text-green-200 inline-flex items-center gap-1"
                 >
                   View on Explorer ↗
                 </a>
@@ -86,12 +101,34 @@ export default function TxStatus({ status, hash, error }: TxStatusProps) {
       )}
 
       {status === "failed" && (
-        <div className="border-red-500/20 bg-red-500/10">
-          <div className="flex items-center gap-3 text-red-400">
+        <div className="bg-red-500/10 border-red-500/20">
+          <div className="flex items-start gap-3 text-red-400">
             <span className="text-xl">❌</span>
             <div className="flex-1">
               <p className="font-medium">Transaction failed</p>
               {error && <p className="text-sm text-red-300 mt-1">{error}</p>}
+              {hash && (
+                <div className="flex flex-col gap-1 mt-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-red-300/70">Hash:</span>
+                    <button
+                      onClick={copyHash}
+                      className="text-sm text-red-300 hover:text-red-200 font-mono"
+                      title="Copy hash"
+                    >
+                      {truncateHash(hash)}
+                    </button>
+                  </div>
+                  <a
+                    href={`${EXPLORER_TX}/${hash}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm text-red-300 hover:text-red-200 inline-flex items-center gap-1"
+                  >
+                    View on Explorer ↗
+                  </a>
+                </div>
+              )}
             </div>
           </div>
         </div>
