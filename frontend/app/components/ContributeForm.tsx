@@ -28,6 +28,17 @@ export default function ContributeForm({ onSuccess }: ContributeFormProps) {
     }
   }, [address, status]);
 
+  useEffect(() => {
+    if (status === "success" || status === "failed") {
+      const timer = setTimeout(() => {
+        setStatus("idle");
+        setTxHash(undefined);
+        setErrorMsg(undefined);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [status]);
+
   const amountXlm = parseFloat(amount) || 0;
   const isValidAmount = amountXlm > 0 && amountXlm <= 7;
   const hasEnoughBalance = balance !== null && amountXlm <= balance - 1;
