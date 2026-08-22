@@ -1,10 +1,14 @@
 "use client";
 
+import { useState } from "react";
 import { useWallet } from "../context/WalletContext";
 import { EXPLORER_CONTRACT } from "../lib/constants";
+import { classifyError } from "../lib/errors";
 
 export default function WalletButton() {
   const { address, isConnected, isWrongNetwork, connect, disconnect } = useWallet();
+  const [error, setError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
   const truncateAddress = (addr: string) => {
     return `${addr.slice(0, 6)}...${addr.slice(-6)}`;
@@ -13,17 +17,37 @@ export default function WalletButton() {
   const copyAddress = () => {
     if (address) {
       navigator.clipboard.writeText(address);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  const handleConnect = async () => {
+    try {
+      setError(null);
+      await connect();
+    } catch (err: any) {
+      const classified = classifyError(err);
+      setError(classified.message);
+      setTimeout(() => setError(null), 5000);
     }
   };
 
   if (!isConnected) {
     return (
-      <button
-        onClick={connect}
-        className="px-6 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 transition-all font-medium"
-      >
-        Connect Wallet
-      </button>
+      <div className="relative">
+        <button
+          onClick={handleConnect}
+          className="px-6 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 transition-all font-medium"
+        >
+          Connect Wallet
+        </button>
+        {error && (
+          <div className="absolute top-full right-0 mt-2 bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-2 text-sm text-red-400 whitespace-nowrap z-50">
+            {error}
+          </div>
+        )}
+      </div>
     );
   }
 
@@ -40,7 +64,7 @@ export default function WalletButton() {
           className="text-sm text-slate-300 hover:text-white transition-colors"
           title="Copy address"
         >
-          {truncateAddress(address!)}
+          {copied ? "Copied!" : truncateAddress(address!)}
         </button>
         <a
           href={`${EXPLORER_CONTRACT}/${address}`}
