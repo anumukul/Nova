@@ -1,12 +1,12 @@
 # Nova
 
-A trustless crowdfunding dApp on Stellar testnet built with Soroban smart contracts.
+A trustless crowdfunding dApp on Stellar testnet, built with a Soroban smart contract and a multi-wallet frontend.
 
-Nova enables decentralized fundraising through a transparent, on-chain campaign system. Contributors send real testnet XLM to the smart contract, which tracks contributions, emits events, and provides real-time updates to the frontend.
+Nova runs a single on-chain fundraising campaign. Contributors send real testnet XLM to the smart contract, which records each contribution, emits an event, and exposes live campaign state. The frontend reads that state over Soroban RPC and streams contribution events into a real-time activity feed.
 
 ## Live Demo
 
-[https://frontend-three-alpha-zpmiggmd0g.vercel.app](https://frontend-three-alpha-zpmiggmd0g.vercel.app)
+https://frontend-three-alpha-zpmiggmd0g.vercel.app
 
 ## Deployed Contract
 
@@ -16,163 +16,149 @@ Nova enables decentralized fundraising through a transparent, on-chain campaign 
 
 ## Transaction Hash
 
-**Contract Call (contribute):** [`13733d4ab55229e5c3c8908191e0a5816ebce33b5c8d4927be90aeece3aee4b0`](https://stellar.expert/explorer/testnet/tx/13733d4ab55229e5c3c8908191e0a5816ebce33b5c8d4927be90aeece3aee4b0)
+**Contract call (`contribute`):** [`13733d4ab55229e5c3c8908191e0a5816ebce33b5c8d4927be90aeece3aee4b0`](https://stellar.expert/explorer/testnet/tx/13733d4ab55229e5c3c8908191e0a5816ebce33b5c8d4927be90aeece3aee4b0)
 
-This transaction demonstrates a successful 5 XLM contribution to the campaign, transferring real testnet XLM via the native asset SAC.
+A successful contribution that transferred real testnet XLM to the campaign contract via the native asset SAC. The call is verifiable on Stellar Explorer at the link above.
+
+## Screenshots
+
+### Wallet options
+
+![Wallet options modal](docs/screenshots/wallet-options.png)
+
+Multi-wallet selection via StellarWalletsKit — Freighter, Albedo, xBull, LOBSTR, HOT, and more.
+
+### Campaign progress and activity feed
+
+![Campaign progress](docs/screenshots/campaign-progress.png)
+
+Live progress bar, raised/goal totals, contributor count, countdown, and a real-time activity feed of contributions streamed from contract events.
+
+### Successful contribution
+
+![Successful contribution](docs/screenshots/successful-contribution.png)
+
+Transaction status showing success, the transaction hash, and a link to view the call on Stellar Explorer.
 
 ## Tech Stack
 
-### Smart Contract
-- **Language:** Rust
-- **Framework:** Soroban SDK v22
-- **Build Target:** wasm32v1-none
-- **Deployment:** Stellar CLI
+**Smart contract**
+- Rust, Soroban SDK v22
+- Build target `wasm32v1-none`
+- Deployed with the Stellar CLI
 
-### Frontend
-- **Framework:** Next.js 14+ (App Router)
-- **Language:** TypeScript
-- **Styling:** Tailwind CSS
-- **Wallet Integration:** @creit.tech/stellar-wallets-kit (multi-wallet support)
-- **Blockchain SDK:** @stellar/stellar-sdk v13+ (with RPC namespace)
-- **Deployment:** Vercel
+**Frontend**
+- Next.js 16 (App Router) + TypeScript
+- Tailwind CSS
+- `@creit.tech/stellar-wallets-kit` — multi-wallet support
+- `@stellar/stellar-sdk` v13 (RPC namespace)
+- Deployed on Vercel
 
 ## Features
 
-- **Multi-Wallet Support:** Connect via Freighter, xBull, Albedo, Rabet, Lobstr, Hana, and more
-- **Real-Time Updates:** Live activity feed powered by contract event polling
-- **Transaction Status:** Full lifecycle visibility (preparing → signing → pending → success/failed)
-- **Campaign Progress:** Live progress bar, contributor count, and countdown timer
-- **Error Handling:** Comprehensive error classification (wallet not found, user rejected, insufficient balance, wrong network, campaign ended)
-- **Responsive Design:** Mobile-first dark theme with Nova branding
+- **Multi-wallet support** — connect via Freighter, Albedo, xBull, LOBSTR, HOT, and others through StellarWalletsKit.
+- **Deployed Soroban contract** — real testnet contract that holds campaign state and collects XLM.
+- **Real-time activity feed** — contract `contrib` events are polled and streamed into the UI.
+- **Live campaign progress** — progress bar, contributor count, and deadline countdown update as contributions arrive.
+- **Full transaction status** — preparing to signing to pending to success/failed, with hash and explorer link.
+- **Error handling** — wallet not found, user rejected, insufficient balance, wrong network, and campaign-ended cases are surfaced to the user.
+- **Responsive dark UI.**
+
+## How It Works
+
+The contract exposes:
+- `initialize(beneficiary, token, goal, deadline)` — configures the campaign once after deployment.
+- `contribute(contributor, amount)` — transfers XLM from the contributor to the contract, updates totals, and emits a `contrib` event.
+- `get_campaign()` — returns full campaign state (read-only).
+- `get_contribution(who)` — returns an address's total contribution (read-only).
+- `withdraw()` — lets the beneficiary withdraw once the goal is met.
+
+The frontend:
+1. Connects a wallet through the StellarWalletsKit modal.
+2. Reads campaign state via `simulateTransaction` (no fee).
+3. Contributes with the full Soroban flow: build, `prepareTransaction` (simulate), sign, `sendTransaction`, then poll `getTransaction`.
+4. Polls `getEvents` for the contract on an interval and updates the feed and progress live.
 
 ## Setup & Run Locally
 
 ### Prerequisites
 
-- Rust 1.84+ with `wasm32v1-none` target
+- Rust 1.84+ with the `wasm32v1-none` target
 - Stellar CLI (latest)
-- Node.js 18+
-- npm or yarn
+- Node.js 20+
 - A Stellar wallet extension (Freighter, xBull, etc.) set to **Testnet**
 
-### Contract Setup
+### Contract
 
-1. **Add the wasm32v1-none target:**
-   ```bash
-   rustup target add wasm32v1-none
-   ```
+```bash
+cd contracts/crowdfund
 
-2. **Build the contract:**
-   ```bash
-   cd contracts/crowdfund
-   stellar contract build
-   ```
+# add the build target
+rustup target add wasm32v1-none
 
-3. **Generate a deployer identity:**
-   ```bash
-   stellar keys generate deployer --network testnet --fund
-   stellar keys address deployer
-   ```
+# build
+stellar contract build
 
-4. **Deploy the contract:**
-   ```bash
-   stellar contract deploy \
-     --wasm target/wasm32v1-none/release/crowdfund.wasm \
-     --source-account deployer \
-     --network testnet
-   ```
-   Save the returned contract ID (starts with `C...`).
+# create + fund a deployer identity
+stellar keys generate deployer --network testnet --fund
+stellar keys address deployer            # note this G... address
 
-5. **Get the native XLM SAC address:**
-   ```bash
-   stellar contract id asset --asset native --network testnet
-   ```
+# deploy — returns the contract ID (starts with C)
+stellar contract deploy \
+  --wasm target/wasm32v1-none/release/crowdfund.wasm \
+  --source-account deployer \
+  --network testnet
 
-6. **Initialize the campaign:**
-   ```bash
-   stellar contract invoke \
-     --id <CONTRACT_ID> \
-     --source-account deployer \
-     --network testnet \
-     -- initialize \
-     --beneficiary <deployer G... address> \
-     --token <NATIVE_SAC> \
-     --goal 1000000000 \
-     --deadline 1790035200
-   ```
+# resolve the native XLM SAC contract id on testnet
+stellar contract id asset --asset native --network testnet
 
-### Frontend Setup
+# initialize the campaign once
+#   goal 100 XLM = 1000000000 stroops; deadline is a future unix timestamp
+stellar contract invoke \
+  --id <CONTRACT_ID> \
+  --source-account deployer \
+  --network testnet \
+  -- initialize \
+  --beneficiary <deployer G... address> \
+  --token <NATIVE_SAC> \
+  --goal 1000000000 \
+  --deadline 1790035200
+```
 
-1. **Install dependencies:**
-   ```bash
-   cd frontend
-   npm install
-   ```
+### Frontend
 
-2. **Configure environment:**
-   ```bash
-   cp .env.example .env
-   ```
-   Edit `.env` and fill in:
-   - `NEXT_PUBLIC_CONTRACT_ID`: Your deployed contract ID
-   - `NEXT_PUBLIC_NATIVE_SAC`: Native XLM SAC address
-   - `NEXT_PUBLIC_READ_ACCOUNT`: A funded testnet account (use your deployer address)
+```bash
+cd frontend
+npm install
 
-3. **Run the development server:**
-   ```bash
-   npm run dev
-   ```
+# create your env file and fill in the values
+cp .env.example .env.local
+```
 
-4. **Open your browser:**
-   Navigate to `http://localhost:3000`
+Set these in `.env.local` (defaults for the public testnet are provided in `.env.example`):
 
-5. **Fund your wallet:**
-   Use the [Stellar Friendbot](https://laboratory.stellar.org/#account-creator) to fund your testnet wallet with XLM.
+- `NEXT_PUBLIC_CONTRACT_ID` — your deployed contract ID
+- `NEXT_PUBLIC_NATIVE_SAC` — native XLM SAC address
+- `NEXT_PUBLIC_READ_ACCOUNT` — any funded testnet account (your deployer address works) used as the source for read-only simulations
 
-## How It Works
+Then run the dev server:
 
-### Smart Contract
+```bash
+npm run dev
+```
 
-The Nova contract implements a single crowdfunding campaign with the following functions:
+Open http://localhost:3000, connect a Testnet wallet, and fund it via [Friendbot](https://friendbot.stellar.org) if needed.
 
-- **`initialize`**: Sets up the campaign with beneficiary, token, goal, and deadline (called once after deployment)
-- **`contribute`**: Accepts XLM contributions, updates totals, and emits events
-- **`get_campaign`**: Returns full campaign state (read-only)
-- **`get_contribution`**: Returns an address's total contribution (read-only)
-- **`withdraw`**: Allows beneficiary to withdraw funds after goal is met
+## Testing
 
-### Frontend Architecture
+Contract unit tests:
 
-1. **Wallet Connection**: StellarWalletsKit provides a modal for multi-wallet selection and signing
-2. **Contract Reads**: Use `simulateTransaction` for read-only calls (no fees)
-3. **Contract Writes**: Full flow: build → prepare (simulate) → sign → send → poll
-4. **Real-Time Events**: Poll `getEvents` every 5 seconds to fetch new contributions
-5. **Transaction Status**: State machine tracks preparing → signing → pending → success/failed
+```bash
+cd contracts/crowdfund
+cargo test
+```
 
-### Event-Driven UI
-
-The contract emits `contrib` events on each contribution. The frontend polls these events and:
-- Updates the activity feed with new contributions
-- Refreshes the campaign progress bar
-- Updates the user's contribution total
-
-## Screenshots
-
-### Wallet Options Modal
-![Wallet Options](docs/screenshots/wallet-options.png)
-*Multi-wallet selection via StellarWalletsKit*
-
-### Campaign Progress
-![Campaign Progress](docs/screenshots/campaign-progress.png)
-*Live progress bar with real-time updates*
-
-### Successful Contribution
-![Successful Contribution](docs/screenshots/successful-contribution.png)
-*Transaction status with hash and explorer link*
-
-### Activity Feed
-![Activity Feed](docs/screenshots/activity-feed.png)
-*Real-time feed of contributions from contract events*
+They cover initialization (including duplicate-init prevention), contributions (totals, per-contributor tracking, event emission), invalid amounts, and deadline enforcement.
 
 ## Project Structure
 
@@ -181,20 +167,17 @@ nova/
 ├── contracts/
 │   └── crowdfund/
 │       ├── Cargo.toml
-│       ├── Makefile
-│       ├── deploy.sh
 │       └── src/
-│           ├── lib.rs          # Smart contract
-│           └── test.rs         # Unit tests
+│           ├── lib.rs          # Soroban contract
+│           └── test.rs         # unit tests
 ├── frontend/
-│   ├── src/
-│   │   ├── app/
-│   │   │   ├── components/     # UI components
-│   │   │   ├── context/        # React context (wallet)
-│   │   │   ├── lib/            # Utilities (contract, events, errors)
-│   │   │   ├── layout.tsx
-│   │   │   ├── page.tsx
-│   │   │   └── globals.css
+│   ├── app/
+│   │   ├── components/         # UI components
+│   │   ├── context/            # wallet context
+│   │   ├── lib/                # contract, events, errors, kit, balance, constants
+│   │   ├── layout.tsx
+│   │   ├── page.tsx
+│   │   └── globals.css
 │   ├── .env.example
 │   └── package.json
 ├── docs/
@@ -202,55 +185,6 @@ nova/
 └── README.md
 ```
 
-## Testing
-
-### Contract Tests
-
-```bash
-cd contracts/crowdfund
-cargo test
-```
-
-Tests cover:
-- Initialization (success and duplicate prevention)
-- Contributions (success, multiple, invalid amounts)
-- Deadline enforcement
-- Event emission
-
-### Manual Testing
-
-1. **Wallet not found**: Try connecting with an uninstalled wallet
-2. **User rejected**: Cancel the wallet signature popup
-3. **Insufficient balance**: Try contributing more than your wallet balance
-4. **Wrong network**: Switch your wallet to Mainnet
-5. **Campaign ended**: (After deadline) Try to contribute
-
-## Deployment
-
-### Vercel Deployment
-
-1. Push your code to GitHub
-2. Import the repository in Vercel
-3. Set environment variables in Vercel project settings:
-   - All `NEXT_PUBLIC_*` variables from `.env.example`
-4. Deploy
-
-### Contract Deployment
-
-The contract is already deployed to testnet. To redeploy:
-```bash
-cd contracts/crowdfund
-./deploy.sh
-```
-
 ## License
 
 MIT
-
-## Contributing
-
-Contributions welcome! Please open an issue or PR.
-
-## Support
-
-For issues or questions, please open a GitHub issue.
