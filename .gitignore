@@ -1,0 +1,32 @@
+# Rust
+target/
+*.rs.bk
+Cargo.lock
+
+# Node
+node_modules/
+.next/
+out/
+.vercel
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+*.wasm
+
+# PRD (do not commit)
+NOVA_PRD.md
