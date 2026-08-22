@@ -98,6 +98,41 @@ impl CrowdfundContract {
         env.events().publish((symbol_short!("contrib"), contributor), amount);
         Ok(())
     }
+
+    pub fn get_campaign(env: Env) -> Result<CampaignData, Error> {
+        let s = env.storage().instance();
+        Ok(CampaignData {
+            beneficiary: s.get(&DataKey::Beneficiary).ok_or(Error::NotInitialized)?,
+            token: s.get(&DataKey::Token).ok_or(Error::NotInitialized)?,
+            goal: s.get(&DataKey::Goal).ok_or(Error::NotInitialized)?,
+            deadline: s.get(&DataKey::Deadline).ok_or(Error::NotInitialized)?,
+            total_raised: s.get(&DataKey::TotalRaised).unwrap_or(0),
+            contributor_count: s.get(&DataKey::ContributorCount).unwrap_or(0),
+            withdrawn: s.get(&DataKey::Withdrawn).unwrap_or(false),
+        })
+    }
+
+    pub fn get_contribution(env: Env, who: Address) -> i128 {
+        env.storage().persistent()
+            .get(&DataKey::Contribution(who))
+            .unwrap_or(0)
+    }
+
+    pub fn withdraw(env: Env) -> Result<(), Error> {
+        let s = env.storage().instance();
+        let beneficiary: Address = s.get(&DataKey::Beneficiary).ok_or(Error::NotInitialized)?;
+        beneficiary.require_auth();
+        if s.get(&DataKey::Withdrawn).unwrap_or(false) { return Err(Error::AlreadyWithdrawn); }
+        let total: i128 = s.get(&DataKey::TotalRaised).unwrap_or(0);
+        let goal: i128 = s.get(&DataKey::Goal).ok_or(Error::NotInitialized)?;
+        if total < goal { return Err(Error::GoalNotMet); }
+        let token: Address = s.get(&DataKey::Token).ok_or(Error::NotInitialized)?;
+        token::Client::new(&env, &token)
+            .transfer(&env.current_contract_address(), &beneficiary, &total);
+        s.set(&DataKey::Withdrawn, &true);
+        env.events().publish((symbol_short!("withdraw"), beneficiary), total);
+        Ok(())
+    }
 }
 
 mod test;
