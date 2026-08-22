@@ -28,7 +28,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   const checkNetwork = useCallback(async () => {
     try {
       const network = await kit.getNetwork();
-      setIsWrongNetwork(network !== WalletNetwork.TESTNET);
+      setIsWrongNetwork(network.networkPassphrase !== NETWORK_PASSPHRASE);
     } catch {
       setIsWrongNetwork(false);
     }

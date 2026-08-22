@@ -7,24 +7,39 @@ import {
 } from "@creit.tech/stellar-wallets-kit";
 import { NETWORK_PASSPHRASE } from "./constants";
 
-export const kit = new StellarWalletsKit({
-  network: WalletNetwork.TESTNET,
-  selectedWalletId: FREIGHTER_ID,
-  modules: allowAllModules(),
+let kitInstance: StellarWalletsKit | null = null;
+
+function getKit(): StellarWalletsKit {
+  if (!kitInstance) {
+    kitInstance = new StellarWalletsKit({
+      network: WalletNetwork.TESTNET,
+      selectedWalletId: FREIGHTER_ID,
+      modules: allowAllModules(),
+    });
+  }
+  return kitInstance;
+}
+
+export const kit = new Proxy({} as StellarWalletsKit, {
+  get(_, prop) {
+    return (getKit() as any)[prop];
+  },
 });
 
 export async function openWalletModal(onPicked: (address: string) => void) {
-  await kit.openModal({
+  const k = getKit();
+  await k.openModal({
     onWalletSelected: async (option: ISupportedWallet) => {
-      kit.setWallet(option.id);
-      const { address } = await kit.getAddress();
+      k.setWallet(option.id);
+      const { address } = await k.getAddress();
       onPicked(address);
     },
   });
 }
 
 export async function signXdr(xdr: string, address: string): Promise<string> {
-  const { signedTxXdr } = await kit.signTransaction(xdr, {
+  const k = getKit();
+  const { signedTxXdr } = await k.signTransaction(xdr, {
     networkPassphrase: NETWORK_PASSPHRASE,
     address,
   });
@@ -33,7 +48,8 @@ export async function signXdr(xdr: string, address: string): Promise<string> {
 
 export async function getWalletAddress(): Promise<string | null> {
   try {
-    const { address } = await kit.getAddress();
+    const k = getKit();
+    const { address } = await k.getAddress();
     return address;
   } catch {
     return null;
