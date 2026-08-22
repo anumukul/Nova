@@ -73,7 +73,32 @@ export async function getContribution(who: string): Promise<bigint> {
   return BigInt(result);
 }
 
-export type TxStatusCallback = (status: "preparing" | "signing" | "pending" | "success", hash?: string) => void;
+async function pollTransactionStatus(hash: string): Promise<{ status: string; ledger?: number }> {
+  try {
+    const res = await fetch(RPC_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: 1,
+        method: "getTransaction",
+        params: { hash },
+      }),
+    });
+    const json = await res.json();
+    if (json.error) {
+      return { status: "NOT_FOUND" };
+    }
+    return {
+      status: json.result?.status ?? "NOT_FOUND",
+      ledger: json.result?.ledger,
+    };
+  } catch {
+    return { status: "NOT_FOUND" };
+  }
+}
+
+export type TxStatusCallback = (status: "preparing" | "signing" | "pending" | "success" | "failed", hash?: string) => void;
 
 export async function contribute(
   address: string,
@@ -104,12 +129,11 @@ export async function contribute(
   const signedTx = TransactionBuilder.fromXDR(signedXdr, NETWORK_PASSPHRASE);
 
   const sent = await server.sendTransaction(signedTx);
-  
+
   const hash = sent.hash;
   const explorerUrl = `${EXPLORER_TX}/${hash}`;
 
   if (sent.status === "ERROR") {
-    onStatus?.("pending", hash);
     throw Object.assign(new Error("Transaction submission failed"), { sendResult: sent });
   }
 
@@ -117,20 +141,24 @@ export async function contribute(
 
   let attempts = 0;
   const maxAttempts = 40;
-  let got = await server.getTransaction(hash);
 
-  while (got.status === rpc.Api.GetTransactionStatus.NOT_FOUND && attempts < maxAttempts) {
-    await new Promise((r) => setTimeout(r, 1500));
-    got = await server.getTransaction(hash);
+  while (attempts < maxAttempts) {
+    await new Promise((r) => setTimeout(r, 2000));
+    const result = await pollTransactionStatus(hash);
+
+    if (result.status === "SUCCESS") {
+      onStatus?.("success", hash);
+      return { hash, explorerUrl };
+    }
+
+    if (result.status === "FAILED") {
+      onStatus?.("failed", hash);
+      throw Object.assign(new Error("Transaction failed on-chain"), { hash, explorerUrl });
+    }
+
     attempts++;
   }
 
-  if (got.status === rpc.Api.GetTransactionStatus.SUCCESS) {
-    onStatus?.("success", hash);
-  } else {
-    console.warn("Transaction status:", got.status, "- assuming success since it was submitted");
-    onStatus?.("success", hash);
-  }
-
-  return { hash, explorerUrl };
+  onStatus?.("failed", hash);
+  throw Object.assign(new Error("Transaction timed out waiting for confirmation"), { hash, explorerUrl });
 }
