@@ -6,6 +6,7 @@ import NetworkBanner from "./components/NetworkBanner";
 import CampaignCard from "./components/CampaignCard";
 import ContributeForm from "./components/ContributeForm";
 import MyContribution from "./components/MyContribution";
+import ActivityFeed from "./components/ActivityFeed";
 
 export default function Home() {
   const [refreshKey, setRefreshKey] = useState(0);
@@ -22,6 +23,7 @@ export default function Home() {
         <div className="grid gap-8 lg:grid-cols-2">
           <div className="space-y-8">
             <CampaignCard key={refreshKey} />
+            <ActivityFeed refreshKey={refreshKey} />
           </div>
           <div className="space-y-8">
             <ContributeForm onSuccess={handleSuccess} />
