@@ -40,7 +40,8 @@ export default function ContributeForm({ onSuccess }: ContributeFormProps) {
   }, [status]);
 
   const amountXlm = parseFloat(amount) || 0;
-  const isValidAmount = amountXlm > 0 && amountXlm <= 7;
+  const decimalPlaces = amount.includes('.') ? amount.split('.')[1]?.length || 0 : 0;
+  const isValidAmount = amountXlm > 0 && decimalPlaces <= 7;
   const hasEnoughBalance = balance !== null && amountXlm <= balance - 1;
   const canSubmit =
     isConnected && !isWrongNetwork && isValidAmount && hasEnoughBalance && status === "idle";
