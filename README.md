@@ -6,7 +6,7 @@ Nova enables decentralized fundraising through a transparent, on-chain campaign 
 
 ## Live Demo
 
-[Deploy on Vercel](#) *(Update with your Vercel URL after deployment)*
+[https://frontend-three-alpha-zpmiggmd0g.vercel.app](https://frontend-three-alpha-zpmiggmd0g.vercel.app)
 
 ## Deployed Contract
 
