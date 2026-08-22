@@ -68,6 +68,36 @@ impl CrowdfundContract {
         s.set(&DataKey::Withdrawn, &false);
         Ok(())
     }
+
+    pub fn contribute(env: Env, contributor: Address, amount: i128) -> Result<(), Error> {
+        contributor.require_auth();
+        if amount <= 0 { return Err(Error::InvalidAmount); }
+
+        let s = env.storage().instance();
+        let deadline: u64 = s.get(&DataKey::Deadline).ok_or(Error::NotInitialized)?;
+        if env.ledger().timestamp() > deadline {
+            return Err(Error::CampaignEnded);
+        }
+
+        let token: Address = s.get(&DataKey::Token).ok_or(Error::NotInitialized)?;
+        let client = token::Client::new(&env, &token);
+        client.transfer(&contributor, &env.current_contract_address(), &amount);
+
+        let mut total: i128 = s.get(&DataKey::TotalRaised).unwrap_or(0);
+        total += amount;
+        s.set(&DataKey::TotalRaised, &total);
+
+        let key = DataKey::Contribution(contributor.clone());
+        let prior: i128 = env.storage().persistent().get(&key).unwrap_or(0);
+        if prior == 0 {
+            let count: u32 = s.get(&DataKey::ContributorCount).unwrap_or(0);
+            s.set(&DataKey::ContributorCount, &(count + 1));
+        }
+        env.storage().persistent().set(&key, &(prior + amount));
+
+        env.events().publish((symbol_short!("contrib"), contributor), amount);
+        Ok(())
+    }
 }
 
 mod test;
