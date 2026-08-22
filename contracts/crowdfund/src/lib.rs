@@ -15,6 +15,7 @@ pub enum Error {
     NotBeneficiary     = 5,
     GoalNotMet         = 6,
     AlreadyWithdrawn   = 7,
+    GoalExceeded       = 8,
 }
 
 #[contracttype]
@@ -77,6 +78,13 @@ impl CrowdfundContract {
         let deadline: u64 = s.get(&DataKey::Deadline).ok_or(Error::NotInitialized)?;
         if env.ledger().timestamp() > deadline {
             return Err(Error::CampaignEnded);
+        }
+
+        let goal: i128 = s.get(&DataKey::Goal).ok_or(Error::NotInitialized)?;
+        let total: i128 = s.get(&DataKey::TotalRaised).unwrap_or(0);
+        let remaining = goal - total;
+        if amount > remaining {
+            return Err(Error::GoalExceeded);
         }
 
         let token: Address = s.get(&DataKey::Token).ok_or(Error::NotInitialized)?;

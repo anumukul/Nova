@@ -2,17 +2,18 @@
 
 import { useState, useEffect } from "react";
 import { useWallet } from "../context/WalletContext";
-import { contribute } from "../lib/contract";
+import { contribute, CampaignData } from "../lib/contract";
 import { getXlmBalance } from "../lib/balance";
-import { xlmToStroops } from "../lib/constants";
+import { xlmToStroops, stroopsToXlm } from "../lib/constants";
 import TxStatus, { TxStatusType } from "./TxStatus";
 import { classifyError } from "../lib/errors";
 
 interface ContributeFormProps {
+  campaign: CampaignData | null;
   onSuccess: () => void;
 }
 
-export default function ContributeForm({ onSuccess }: ContributeFormProps) {
+export default function ContributeForm({ campaign, onSuccess }: ContributeFormProps) {
   const { address, isConnected, isWrongNetwork } = useWallet();
   const [amount, setAmount] = useState("");
   const [balance, setBalance] = useState<number | null>(null);
@@ -43,8 +44,15 @@ export default function ContributeForm({ onSuccess }: ContributeFormProps) {
   const decimalPlaces = amount.includes('.') ? amount.split('.')[1]?.length || 0 : 0;
   const isValidAmount = amountXlm > 0 && decimalPlaces <= 7;
   const hasEnoughBalance = balance !== null && amountXlm <= balance - 1;
+  
+  const remainingXlm = campaign 
+    ? stroopsToXlm(campaign.goal - campaign.total_raised)
+    : null;
+  
+  const withinGoal = remainingXlm !== null && amountXlm <= remainingXlm;
+  
   const canSubmit =
-    isConnected && !isWrongNetwork && isValidAmount && hasEnoughBalance && status === "idle";
+    isConnected && !isWrongNetwork && isValidAmount && hasEnoughBalance && withinGoal && status === "idle";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -103,9 +111,19 @@ export default function ContributeForm({ onSuccess }: ContributeFormProps) {
               Balance: {balance.toFixed(2)} XLM
             </p>
           )}
+          {remainingXlm !== null && (
+            <p className="text-xs text-slate-500 mt-1">
+              Remaining to goal: {remainingXlm.toFixed(2)} XLM
+            </p>
+          )}
           {amountXlm > 0 && !hasEnoughBalance && (
             <p className="text-xs text-red-400 mt-1">
               Insufficient XLM balance for this contribution.
+            </p>
+          )}
+          {amountXlm > 0 && hasEnoughBalance && !withinGoal && (
+            <p className="text-xs text-red-400 mt-1">
+              Amount exceeds remaining goal ({remainingXlm?.toFixed(2)} XLM left).
             </p>
           )}
         </div>

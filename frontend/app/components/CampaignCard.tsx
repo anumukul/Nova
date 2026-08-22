@@ -1,27 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getCampaign, CampaignData } from "../lib/contract";
+import { CampaignData } from "../lib/contract";
 import { stroopsToXlm } from "../lib/constants";
 
-export default function CampaignCard() {
-  const [campaign, setCampaign] = useState<CampaignData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [timeLeft, setTimeLeft] = useState<string>("");
+interface CampaignCardProps {
+  campaign: CampaignData | null;
+}
 
-  useEffect(() => {
-    const fetchCampaign = async () => {
-      try {
-        const data = await getCampaign();
-        setCampaign(data);
-      } catch (error) {
-        console.error("Failed to fetch campaign:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchCampaign();
-  }, []);
+export default function CampaignCard({ campaign }: CampaignCardProps) {
+  const [timeLeft, setTimeLeft] = useState<string>("");
 
   useEffect(() => {
     if (!campaign) return;
@@ -47,20 +35,12 @@ export default function CampaignCard() {
     return () => clearInterval(interval);
   }, [campaign]);
 
-  if (loading) {
+  if (!campaign) {
     return (
       <div className="bg-slate-900 border border-slate-800 rounded-xl p-8 animate-pulse">
         <div className="h-8 bg-slate-800 rounded w-1/3 mb-4"></div>
         <div className="h-4 bg-slate-800 rounded w-2/3 mb-6"></div>
         <div className="h-32 bg-slate-800 rounded"></div>
-      </div>
-    );
-  }
-
-  if (!campaign) {
-    return (
-      <div className="bg-slate-900 border border-slate-800 rounded-xl p-8 text-center">
-        <p className="text-slate-400">Failed to load campaign data</p>
       </div>
     );
   }

@@ -10,13 +10,13 @@ Nova enables decentralized fundraising through a transparent, on-chain campaign 
 
 ## Deployed Contract
 
-**Contract ID:** [`CBZ2FWJBZYQWMYQ3XEXHPY6PFKGRIUDKWDPEDH2QG4RIGD6MQW3NUNQ4`](https://stellar.expert/explorer/testnet/contract/CBZ2FWJBZYQWMYQ3XEXHPY6PFKGRIUDKWDPEDH2QG4RIGD6MQW3NUNQ4)
+**Contract ID:** [`CCJ67UMBEM2NYCZM4DCPZN7HMVANZUUZAAAA2XEX7PHQL2UFKKNBQJD7`](https://stellar.expert/explorer/testnet/contract/CCJ67UMBEM2NYCZM4DCPZN7HMVANZUUZAAAA2XEX7PHQL2UFKKNBQJD7)
 
 **Network:** Stellar Testnet
 
 ## Transaction Hash
 
-**Contract Call (contribute):** [`3c71ce6bd01a12c9161f4cfafb088019132ff8c4f789771ffc5ebc88b71b0a9d`](https://stellar.expert/explorer/testnet/tx/3c71ce6bd01a12c9161f4cfafb088019132ff8c4f789771ffc5ebc88b71b0a9d)
+**Contract Call (contribute):** [`13733d4ab55229e5c3c8908191e0a5816ebce33b5c8d4927be90aeece3aee4b0`](https://stellar.expert/explorer/testnet/tx/13733d4ab55229e5c3c8908191e0a5816ebce33b5c8d4927be90aeece3aee4b0)
 
 This transaction demonstrates a successful 5 XLM contribution to the campaign, transferring real testnet XLM via the native asset SAC.
 

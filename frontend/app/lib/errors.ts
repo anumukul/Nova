@@ -57,6 +57,13 @@ export function classifyError(error: any): ClassifiedError {
     };
   }
 
+  if (lower.includes("goal") || lower.includes("exceeded")) {
+    return {
+      type: "goal_exceeded",
+      message: "Contribution exceeds remaining goal amount.",
+    };
+  }
+
   if (lower.includes("invalid") || lower.includes("amount")) {
     return {
       type: "invalid_amount",
